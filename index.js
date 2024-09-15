@@ -23,7 +23,25 @@ app.get("/", async (req, res) => {
   let countries = [];
   result.rows.forEach((country) => countries.push(country.country_code));
   res.render("index.ejs", { countries: countries, total: countries.length });
-  db.end();
+});
+
+app.post("/add", async (req, res) => {
+  const input = req.body["country"];
+
+  const result = await db.query(
+    "SELECT country_code FROM countries WHERE country = $1",
+    [input]
+  );
+
+  if (result.rows.length !== 0) {
+    const data = result.rows[0];
+    const country_code = data.country_code;
+    await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [
+      country_code,
+    ]);
+  }
+
+  res.redirect("/");
 });
 
 app.listen(port, () => {
