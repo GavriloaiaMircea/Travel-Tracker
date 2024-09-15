@@ -26,27 +26,42 @@ async function checkVisisted() {
 }
 
 app.get("/", async (req, res) => {
-  const contries = await checkVisisted();
+  const countries = await checkVisisted();
   res.render("index.ejs", { countries: countries, total: countries.length });
 });
 
 app.post("/add", async (req, res) => {
   const input = req.body["country"];
+  try {
+    const result = await db.query(
+      "SELECT country_code FROM countries WHERE country = $1",
+      [input]
+    );
 
-  const result = await db.query(
-    "SELECT country_code FROM countries WHERE country = $1",
-    [input]
-  );
-
-  if (result.rows.length !== 0) {
     const data = result.rows[0];
     const country_code = data.country_code;
-    await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [
-      country_code,
-    ]);
+    try {
+      await db.query(
+        "INSERT INTO visited_countries (country_code) VALUES ($1)",
+        [country_code]
+      );
+      res.redirect("/");
+    } catch (err) {
+      const countries = await checkVisisted();
+      res.render("index.ejs", {
+        countries: countries,
+        total: countries.length,
+        error: "This country was already added! Try again!",
+      });
+    }
+  } catch (err) {
+    const countries = await checkVisisted();
+    res.render("index.ejs", {
+      countries: countries,
+      total: countries.length,
+      error: "This country does not exist! Try again!",
+    });
   }
-
-  res.redirect("/");
 });
 
 app.listen(port, () => {
